@@ -12,10 +12,6 @@
             <label for="image">Upload Image:</label>
             <input type="file" id="image" name="image" accept="image/*" multiple>
         </div>
-        <div>
-            <label for="uploadUsername">Username:</label>
-            <input type="text" id="uploadUsername" name="username" required>
-        </div>
         <button type="button" onclick="uploadFiles()">Upload</button>
     </form>
 
@@ -49,6 +45,8 @@
     <ul id="fileList"></ul>
 
     <script>
+        let token = '';
+
         async function uploadFiles() {
             const form = document.getElementById('uploadForm');
             const formData = new FormData(form);
@@ -56,6 +54,9 @@
             try {
                 const response = await fetch('http://localhost:3000/upload', {
                     method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: formData
                 });
                 const result = await response.json();
@@ -101,9 +102,11 @@
                     },
                     body: JSON.stringify({ username, password })
                 });
-                const result = await response.text();
-                console.log(result);
-                alert(result);
+                const result = await response.json();
+                token = result.token; // Store token
+                console.log('Logged in successfully');
+                alert('Logged in successfully');
+                fetchFileList(); // Fetch file list after login
             } catch (error) {
                 console.error('Error logging in:', error);
                 alert('Error logging in');
@@ -112,26 +115,34 @@
 
         async function fetchFileList() {
             try {
-                const response = await fetch('http://localhost:3000/listFiles');
+                const response = await fetch('http://localhost:3000/listFiles', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
                 const fileList = await response.json();
                 console.log(fileList);
 
                 const fileListContainer = document.getElementById('fileList');
-                fileListContainer.innerHTML = ''; 
+                fileListContainer.innerHTML = ''; // Clear previous list
 
                 fileList.forEach(file => {
                     const listItem = document.createElement('li');
 
+                    // Create an image element and set its attributes
                     const img = document.createElement('img');
                     img.src = file.url;
                     img.alt = file.name;
-                    img.style.maxWidth = '200px'; 
+                    img.style.maxWidth = '200px'; // Set image max width for display
 
+                    // Append image to list item
                     listItem.appendChild(img);
 
-                    const textNode = document.createTextNode(` - Uploaded by: ${file.uploadedBy}, Updated: ${file.updated}, Size: ${file.size} bytes`);
+                    // Add file name and other details
+                    const textNode = document.createTextNode(` - Updated: ${file.updated}, Size: ${file.size} bytes, Uploaded by: ${file.uploadedBy}`);
                     listItem.appendChild(textNode);
 
+                    // Append list item to file list container
                     fileListContainer.appendChild(listItem);
                 });
             } catch (error) {
@@ -140,6 +151,7 @@
             }
         }
 
+        // Fetch initial file list on page load
         fetchFileList();
     </script>
 </body>
